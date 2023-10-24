@@ -3,20 +3,23 @@ import os
 
 directoryField = None
 directory = ""
+valid_directory_path = False
 
 def setDirectory(*args):
     global directoryField 
     global directory
+    global valid_directory_path
     selected_directory = cmds.fileDialog2(dialogStyle=2, fileMode=3)
     if selected_directory:
         directory = selected_directory[0]
         if not os.path.exists(directory + "/WIP"):
             customPopup("Directory not valid (missing either WIP or Published folder")
             cmds.textField(directoryField, edit=True, text="")
+            valid_directory_path = False
         else:
             cmds.textField(directoryField, edit=True, text=directory)
             print("Selected Directory:", directory)
-
+            valid_directory_path = True
 
 def assetPublishing():
     global directoryField 
