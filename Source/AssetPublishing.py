@@ -97,6 +97,8 @@ def publishExport(*args):
         set_path = this_publish_path + "/sets"    
         layout_path = this_publish_path + "/layout"
         animation_path = this_publish_path +"/animations"
+        layout_source_path = layout_path + "/source"
+        layout_cache_path = layout_path + "/cache"
         
         if not os.path.exists(this_publish_path):
             os.makedirs(this_publish_path)
@@ -104,8 +106,17 @@ def publishExport(*args):
             os.makedirs(set_path)
             os.makedirs(layout_path)
             os.makedirs(animation_path)
+            os.makedirs(layout_cache_path)
+            os.makedirs(layout_source_path)
             
         cmds.file(latest_published_version, open=True, force=True)
+        cameras = cmds.ls(type='camera')
+        for camera_name in cameras:
+            cmds.select(camera_name, replace=True)
+            source_exported_file = os.path.join(layout_source_path , camera_name + ".mb")
+            cache_exported_file = os.path.join(layout_cache_path , camera_name + ".abc")
+            cmds.file(source_exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
+            cmds.AbcExport(j="-frameRange 1 120 -root " + camera_name + " -file " + cache_exported_file)
         all_sets = cmds.listSets(allSets=True)
         for set_name in all_sets:
             if set_name != 'defaultLastHiddenSet' and set_name != 'defaultHideFaceDataSet' and set_name != 'defaultCreaseDataSet':
@@ -127,8 +138,7 @@ def publishExport(*args):
                             os.makedirs(ABC_file_path)
                         alembic_file = os.path.join(ABC_file_path, object_name + ".abc")
                         fbx_export_path = os.path.join(FBX_file_path, object_name + ".fbx")
-                        #mel_command = 'FBXExport -f "{0}" -s -typ "FBX export" -pr -ea 1 -es false -et 1 -en false -fme 0 -fmi 1 -em false -v fbxm'.format(fbx_export_path)
-                        #mel.eval(mel_command)
+                        #mel.eval( 'FBXExport -f "{0}" -s'.format(fbx_export_path) )
                         cmds.AbcExport(j="-frameRange 1 120 -root " + object_name + " -file " + alembic_file)
     else:
         print("Directory not set or not valid.")
