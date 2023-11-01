@@ -113,18 +113,29 @@ def publishExport(*args):
         os.makedirs(layout_path)
         os.makedirs(animation_path)
         
-    cmds.file(latest_published_version, open=True, force=True) ##change to read without having to open??
+    cmds.file(latest_published_version, open=True, force=True)
     all_sets = cmds.listSets(allSets=True)
     for set_name in all_sets:
-        if set_name != 'defaultLastHiddenSet':
+        if set_name != 'defaultLastHiddenSet' and set_name != 'defaultHideFaceDataSet' and set_name != 'defaultCreaseDataSet':
             cmds.select(set_name, replace=True)
             exported_file = set_path + "/" + set_name
             cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
             objects_in_set = cmds.listConnections(set_name, type='transform', shapes=True)
             for object_name in objects_in_set:
                 cmds.select(object_name, replace=True)
-                exported_file = setPiece_path + "/" + object_name
+                exported_file = os.path.join(setPiece_path, object_name + ".mb")
                 cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
+                FBX_file_path = os.path.join(animation_path, object_name, "fbx")
+                ABC_file_path = os.path.join(animation_path, object_name, "alembic")
+                if not os.path.exists(FBX_file_path):
+                    os.makedirs(FBX_file_path)
+                if not os.path.exists(ABC_file_path):
+                    os.makedirs(ABC_file_path)
+                alembic_file = os.path.join(ABC_file_path, object_name + ".abc")
+                fbx_export_file = os.path.join(FBX_file_path, object_name + ".fbx")
+                print(fbx_export_file)
+               # cmds.file(fbx_export_file, force=True, options="v=0;", type="FBX export", pr=False)
+                cmds.AbcExport(j="-frameRange 1 120 -root " + object_name + " -file " + alembic_file)
         
 def assetPublishing():
     global directoryField 
