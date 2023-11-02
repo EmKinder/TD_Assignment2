@@ -1,0 +1,50 @@
+import maya.cmds as cmds
+import os
+
+# ... (previous functions remain the same)
+
+def open_preview_window(*args):
+    if not cmds.window("previewWindow", exists=True):
+        cmds.window("previewWindow", title="Lighting Preview", widthHeight=(400, 400))
+        cmds.paneLayout()
+        cmds.modelPanel(camera='persp')
+        cmds.showWindow("previewWindow")
+    else:
+        cmds.showWindow("previewWindow")
+
+def quick_render(*args):
+    cmds.arnoldRender()
+
+def set_render_quality(*args):
+    quality = cmds.optionMenu("qualityMenu", query=True, value=True)
+    if quality == "Low":
+        cmds.setAttr("defaultRenderGlobals.imageQuality", 0.25)
+    elif quality == "Medium":
+        cmds.setAttr("defaultRenderGlobals.imageQuality", 0.5)
+    elif quality == "High":
+        cmds.setAttr("defaultRenderGlobals.imageQuality", 1)
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # ... (previous UI elements remain the same)
+    
+    cmds.separator(height=10, style='in')
+    cmds.text(label="Real-Time Preview and Rendering", align='center')
+    cmds.button(label="Open Preview Window", command=open_preview_window)
+    cmds.button(label="Quick Render", command=quick_render)
+    cmds.optionMenu("qualityMenu", label="Render Quality")
+    cmds.menuItem(label="Low")
+    cmds.menuItem(label="Medium")
+    cmds.menuItem(label="High")
+    cmds.button(label="Set Quality", command=set_render_quality)
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()

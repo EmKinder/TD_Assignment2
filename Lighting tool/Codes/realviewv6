@@ -1,0 +1,40 @@
+import maya.cmds as cmds
+
+def set_render_quality(*args):
+    quality = cmds.optionMenu("qualityMenu", query=True, value=True)
+    if quality == "Low":
+        cmds.setAttr("defaultArnoldRenderOptions.AASamples", 2)
+    elif quality == "Medium":
+        cmds.setAttr("defaultArnoldRenderOptions.AASamples", 4)
+    elif quality == "High":
+        cmds.setAttr("defaultArnoldRenderOptions.AASamples", 8)
+    else:
+        cmds.warning("Unknown quality setting: {}".format(quality))
+
+# ... (other functions remain the same)
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # ... (previous UI elements remain the same)
+    
+    cmds.separator(height=10, style='in')
+    cmds.text(label="Real-Time Preview and Rendering", align='center')
+    cmds.button(label="Open Preview Window", command=open_preview_window)
+    cmds.button(label="Quick Render", command=quick_render)
+    
+    cmds.optionMenu("qualityMenu", label="Render Quality")
+    cmds.menuItem(label="Low")
+    cmds.menuItem(label="Medium")
+    cmds.menuItem(label="High")
+    cmds.button(label="Set Quality", command=set_render_quality)
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()

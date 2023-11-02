@@ -1,0 +1,98 @@
+import maya.cmds as cmds
+import os
+
+def create_light(light_type, *args):
+    light_types = {
+        "Point Light": "pointLight",
+        "Directional Light": "directionalLight",
+        "Spot Light": "spotLight",
+        "Area Light": "areaLight"
+    }
+    if light_type in light_types:
+        light_name = cmds.shadingNode(light_types[light_type], asLight=True)
+        light_transform = cmds.listRelatives(light_name, parent=True, fullPath=True)
+        if light_transform:
+            cmds.select(light_transform)
+            return light_transform[0]
+    else:
+        cmds.warning("Invalid light type specified")
+
+def delete_selected_lights(*args):
+    selected_objects = cmds.ls(selection=True, dag=True, long=True)
+    for obj in selected_objects:
+        if cmds.objectType(obj, isType="light"):
+            light_transform = cmds.listRelatives(obj, parent=True, fullPath=True)
+            if light_transform:
+                cmds.delete(light_transform)
+        elif cmds.listRelatives(obj, children=True, type="light"):
+            cmds.delete(obj)
+
+def group_lights(*args):
+    selected_objects = cmds.ls(selection=True)
+    if selected_objects:
+        group_name = cmds.group(selected_objects, name="light_group")
+        return group_name
+    else:
+        cmds.warning("No lights selected to group")
+
+def rename_light(*args):
+    new_name = cmds.textFieldGrp("renameLightField", query=True, text=True)
+    selected_objects = cmds.ls(selection=True, long=True)
+    for obj in selected_objects:
+        if cmds.objectType(obj, isType="transform") and cmds.listRelatives(obj, children=True, type="light"):
+            cmds.rename(obj, new_name)
+        else:
+            cmds.warning(f"{obj} is not a light transform.")
+
+# ... (other functions remain the same)
+
+def save_lighting_preset(*args):
+    preset_name = cmds.textFieldGrp("presetNameField", query=True, text=True)
+    if not preset_name:
+        cmds.warning("Please enter a valid preset name.")
+        return
+    
+    directory = cmds.fileDialog2(fileMode=3, caption="Select Directory to Save Preset")[0]
+    if not directory:
+        return
+    
+    preset_path = os.path.join(directory, preset_name + ".ma")
+    
+    lights = cmds.ls(lights=True)
+    if not lights:
+        cmds.warning("No lights found in the scene.")
+        return
+    
+    cmds.select(lights, replace=True)
+    cmds.file(preset_path, type='mayaAscii', exportSelected=True, force=True)
+    
+    cmds.confirmDialog(title="Preset Saved", message="Lighting preset saved successfully!", button=["OK"])
+    cmds.select(clear=True)
+
+def load_lighting_preset(*args):
+    preset_path = cmds.fileDialog2(fileMode=1, caption="Select Lighting Preset", fileFilter="Maya ASCII (*.ma)")[0]
+    if not preset_path:
+        return
+    
+    cmds.file(preset_path, i=True, type='mayaAscii', mergeNamespacesOnClash=False, options="v=0;", loadReferenceDepth="all")
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # ... (previous UI elements remain the same)
+    
+    cmds.separator(height=10, style='in')
+    cmds.text(label="Lighting Presets", align='center')
+    cmds.textFieldGrp("presetNameField", label="Preset Name", text="new_preset")
+    cmds.button(label="Save Preset", command=save_lighting_preset)
+    cmds.button(label="Load Preset", command=load_lighting_preset)
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()

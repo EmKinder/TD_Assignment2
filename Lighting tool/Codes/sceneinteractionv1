@@ -1,0 +1,57 @@
+import maya.cmds as cmds
+
+def highlight_lights(*args):
+    selected_lights = cmds.ls(selection=True, dag=True, type="light")
+    for light in selected_lights:
+        cmds.setAttr(light + ".useColor", 2)  # Set to user defined color
+        cmds.setAttr(light + ".lightColor", 1, 0, 0)  # Set color to red
+
+def reset_light_colors(*args):
+    all_lights = cmds.ls(dag=True, type="light")
+    for light in all_lights:
+        cmds.setAttr(light + ".useColor", 0)  # Set to default color
+
+def isolate_lights(*args):
+    selected_lights = cmds.ls(selection=True, dag=True, type="light")
+    light_transforms = [cmds.listRelatives(light, parent=True)[0] for light in selected_lights]
+    cmds.isolateSelect("modelPanel4", state=True)
+    cmds.isolateSelect("modelPanel4", addSelected=light_transforms)
+
+def end_isolate_lights(*args):
+    cmds.isolateSelect("modelPanel4", state=False)
+
+def visualize_light_influence(*args):
+    selected_lights = cmds.ls(selection=True, dag=True, type="light")
+    for light in selected_lights:
+        cmds.setAttr(light + ".displayCone", True)
+
+def hide_light_influence(*args):
+    all_lights = cmds.ls(dag=True, type="light")
+    for light in all_lights:
+        cmds.setAttr(light + ".displayCone", False)
+
+# ... (other functions remain the same)
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # ... (previous UI elements remain the same)
+    
+    cmds.separator(height=10, style='in')
+    cmds.text(label="Scene Interaction and Visualization", align='center')
+    cmds.button(label="Highlight Lights", command=highlight_lights)
+    cmds.button(label="Reset Light Colors", command=reset_light_colors)
+    cmds.button(label="Isolate Lights", command=isolate_lights)
+    cmds.button(label="End Isolate Lights", command=end_isolate_lights)
+    cmds.button(label="Visualize Light Influence", command=visualize_light_influence)
+    cmds.button(label="Hide Light Influence", command=hide_light_influence)
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()

@@ -1,0 +1,78 @@
+import maya.cmds as cmds
+import json
+import os
+
+# Directory to store lighting presets
+PRESET_DIR = os.path.expanduser("~/maya/lighting_presets")
+if not os.path.exists(PRESET_DIR):
+    os.makedirs(PRESET_DIR)
+
+def save_lighting_preset(*args):
+    preset_name = cmds.textFieldGrp("presetNameField", query=True, text=True)
+    preset_path = os.path.join(PRESET_DIR, preset_name + ".json")
+    
+    lights = cmds.ls(lights=True)
+    light_data = {}
+    for light in lights:
+        light_data[light] = {
+            "type": cmds.objectType(light),
+            "attributes": {}
+        }
+        attrs = cmds.listAttr(light, writable=True)
+        for attr in attrs:
+            try:
+                value = cmds.getAttr(light + "." + attr)
+                light_data[light]["attributes"][attr] = value
+            except:
+                pass
+    
+    with open(preset_path, 'w') as f:
+        json.dump(light_data, f)
+    
+    update_preset_list()
+    cmds.textScrollList("presetList", edit=True, selectItem=preset_name)
+
+def load_lighting_preset(*args):
+    selected_preset = cmds.textScrollList("presetList", query=True, selectItem=True)
+    if selected_preset:
+        preset_name = selected_preset[0]
+        preset_path = os.path.join(PRESET_DIR, preset_name + ".json")
+        if os.path.exists(preset_path):
+            with open(preset_path, 'r') as f:
+                light_data = json.load(f)
+            
+            for light, data in light_data.items():
+                if cmds.objExists(light):
+                    for attr, value in data["attributes"].items():
+                        try:
+                            cmds.setAttr(light + "." + attr, value)
+                        except:
+                            pass
+
+def update_preset_list(*args):
+    presets = [os.path.splitext(p)[0] for p in os.listdir(PRESET_DIR) if p.endswith(".json")]
+    cmds.textScrollList("presetList", edit=True, removeAll=True)
+    cmds.textScrollList("presetList", edit=True, append=presets)
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # ... (previous UI elements remain the same)
+    
+    cmds.separator(height=10, style='in')
+    cmds.text(label="Lighting Presets", align='center')
+    cmds.textFieldGrp("presetNameField", label="Preset Name", text="new_preset")
+    cmds.button(label="Save Preset", command=save_lighting_preset)
+    cmds.button(label="Load Preset", command=load_lighting_preset)
+    cmds.textScrollList("presetList", height=100)
+    update_preset_list()
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()

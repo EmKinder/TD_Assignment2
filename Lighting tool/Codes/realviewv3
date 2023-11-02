@@ -1,0 +1,63 @@
+import maya.cmds as cmds
+import os
+
+def create_light(light_type, *args):
+    light_types = {
+        "Point Light": "pointLight",
+        "Directional Light": "directionalLight",
+        "Spot Light": "spotLight",
+        "Area Light": "areaLight"
+    }
+    if light_type in light_types:
+        light_name = cmds.shadingNode(light_types[light_type], asLight=True)
+        light_transform = cmds.listRelatives(light_name, parent=True, fullPath=True)
+        if light_transform:
+            cmds.select(light_transform)
+            return light_transform[0]
+    else:
+        cmds.warning("Invalid light type specified")
+
+# ... (other functions remain the same)
+
+def open_preview_window(*args):
+    if not cmds.window("previewWindow", exists=True):
+        cmds.window("previewWindow", title="Lighting Preview", widthHeight=(400, 400))
+        cmds.paneLayout()
+        model_panel = cmds.modelPanel(camera='persp')
+        if not model_panel:
+            cmds.warning("Failed to create model panel.")
+            return
+        cmds.showWindow("previewWindow")
+    else:
+        cmds.showWindow("previewWindow")
+
+def quick_render(*args):
+    if not cmds.pluginInfo("mtoa", query=True, loaded=True):
+        cmds.loadPlugin("mtoa")
+    if cmds.getAttr("defaultRenderGlobals.currentRenderer") != "arnold":
+        cmds.setAttr("defaultRenderGlobals.currentRenderer", "arnold", type="string")
+    try:
+        cmds.arnoldRender()
+        cmds.confirmDialog(title="Render", message="Render completed successfully!", button=["OK"])
+    except RuntimeError as e:
+        cmds.warning("Failed to render: {}".format(str(e)))
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # ... (previous UI elements remain the same)
+    
+    cmds.separator(height=10, style='in')
+    cmds.text(label="Real-Time Preview and Rendering", align='center')
+    cmds.button(label="Open Preview Window", command=open_preview_window)
+    cmds.button(label="Quick Render", command=quick_render)
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()
