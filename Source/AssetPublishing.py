@@ -3,6 +3,7 @@ import os
 import shutil
 import re
 import maya.mel as mel
+from functools import partial
 
 directoryField = None
 directory = ""
@@ -10,6 +11,7 @@ WIP_path = ""
 publish_path = ""
 valid_directory_path = False
 name = ""
+department_name = "Modelling"
 #options = "-s"  # Example FBX export options (modify as needed)
 
 
@@ -41,19 +43,29 @@ def updateName(*args):
 
 def WIPExport(*args):
     updateName()
+    
     global name
     global WIP_path
     global valid_directory_path
+    global department_name
+    print("Department: " + department_name)
     #assets = cmds.ls(type="transform", selection=True)[0]
     version_no = 1
     this_directory_name = WIP_path + "/" + name
+    sequence_directory = this_directory_name + "/Sequence"
+    assets_directory = this_directory_name + "/Assets"
     print("WIP_path:", WIP_path)
     print("this_directory_name:", this_directory_name)
 
     if not os.path.exists(this_directory_name):
         os.makedirs(this_directory_name)
+        os.makedirs(sequence_directory)
+        os.makedirs(assets_directory)
     file_path = name + "_" + "{:03d}".format(version_no) + ".mb"
-    full_file_path = os.path.join(this_directory_name, file_path)  # Construct the full file path
+    if department_name == "Modelling":
+        full_file_path = os.path.join(assets_directory, file_path)
+    else:
+        full_file_path = os.path.join(sequence_directory, file_path)
 
     print("full_file_path:", full_file_path)
 
@@ -61,7 +73,10 @@ def WIPExport(*args):
         while os.path.isfile(full_file_path):
             version_no += 1
             file_path = name + "_" + "{:03d}".format(version_no) + ".mb"
-            full_file_path = os.path.join(this_directory_name, file_path)  # Update the full file path
+            if department_name == "Modelling":
+                full_file_path = os.path.join(assets_directory, file_path)
+            else:
+                full_file_path = os.path.join(sequence_directory, file_path)
             print("version exists, retrying")
 
         print("WIP export")
@@ -78,9 +93,13 @@ def publishExport(*args):
     global name 
     global WIP_path
     global publish_path
+    global directory_name
     version_no = 1
     dir_no = 1
-    this_directory_name = WIP_path + "/" + name
+    if department_name == "Modelling":
+        this_directory_name = WIP_path + "/" + name + "/Assets"
+    else:
+        this_directory_name = WIP_path + "/" + name + "/Sequence"
     file_path = name + "_" + "{:03d}".format(version_no) + ".mb"
     full_file_path = os.path.join(this_directory_name, file_path)
     
@@ -159,6 +178,12 @@ def publishExport(*args):
                         cmds.AbcExport(j="-frameRange 1 120 -root " + object_name + " -file " + alembic_file)
     else:
         print("Directory not set or not valid.")
+        
+def menu_item_selected(selection):
+    global department_name
+    cmds.confirmDialog(title='Menu Item Selected', message='You selected: ' + selection, button='OK')
+    department_name = selection
+    print("Department Changed To: " + department_name)
                 
 def assetPublishing():
     global directoryField 
@@ -181,13 +206,25 @@ def assetPublishing():
     text_field = cmds.textField('nameText', placeholderText="Name")
     
     cmds.separator(h=10, style='none')
-            
+    
+    menu_label = 'Department'
+    menu_items = ['Modelling', 'Layout', 'Animation', 'Lighting']
+    
+    menu = cmds.optionMenu(label=menu_label, changeCommand=lambda x: menu_item_selected(cmds.optionMenu(menu, q=True, v=True)))
+
+    for item in menu_items:
+        cmds.menuItem(label=item)
+        
+    cmds.separator(h=10, style='none')     
+           
     cmds.button(label="WIP", command=WIPExport)
     cmds.separator(h=5, style='none')
     cmds.button(label="Publish", command=publishExport)  
     
-    cmds.showWindow('assetPublishing')
     
+    cmds.showWindow('assetPublishing')
+
+        
 def customPopup(message):
     if cmds.window("customPopupWindow", exists=True):
         cmds.deleteUI("customPopupWindow")
