@@ -1,58 +1,40 @@
 import maya.cmds as cmds
-import os
 import json
+import os
 
 def create_light(light_type, *args):
-    light_types = {
+    light_mapping = {
         "Point Light": "pointLight",
         "Directional Light": "directionalLight",
         "Spot Light": "spotLight",
         "Area Light": "areaLight"
     }
-    if light_type in light_types:
-        light_name = cmds.shadingNode(light_types[light_type], asLight=True)
-        light_transform = cmds.listRelatives(light_name, parent=True, fullPath=True)
-        if light_transform:
-            cmds.select(light_transform)
-            return light_transform[0]
+    if light_type in light_mapping:
+        light = cmds.shadingNode(light_mapping[light_type], asLight=True)
+        cmds.select(light)
     else:
         cmds.warning("Invalid light type specified")
 
 def delete_selected_lights(*args):
-    selected_objects = cmds.ls(selection=True, dag=True, long=True)
+    selected_objects = cmds.ls(selection=True)
     for obj in selected_objects:
         if cmds.objectType(obj, isType="light"):
-            light_transform = cmds.listRelatives(obj, parent=True, fullPath=True)
-            if light_transform:
-                cmds.delete(light_transform)
-        elif cmds.listRelatives(obj, children=True, type="light"):
             cmds.delete(obj)
+        else:
+            light_shape = cmds.listRelatives(obj, shapes=True, type="light")
+            if light_shape:
+                cmds.delete(obj)
 
 def group_lights(*args):
     selected_objects = cmds.ls(selection=True)
     if selected_objects:
-        group_name = cmds.group(selected_objects, name="light_group")
-        return group_name
-    else:
-        cmds.warning("No lights selected to group")
+        cmds.group(selected_objects, name="light_group")
 
 def rename_light(*args):
     new_name = cmds.textFieldGrp("renameLightField", query=True, text=True)
-    selected_objects = cmds.ls(selection=True, long=True)
+    selected_objects = cmds.ls(selection=True)
     for obj in selected_objects:
-        if cmds.objectType(obj, isType="transform") and cmds.listRelatives(obj, children=True, type="light"):
-            cmds.rename(obj, new_name)
-        else:
-            cmds.warning(f"{obj} is not a light transform.")
-
-def rename_group(*args):
-    new_name = cmds.textFieldGrp("renameGroupField", query=True, text=True)
-    selected_objects = cmds.ls(selection=True, long=True)
-    for obj in selected_objects:
-        if cmds.objectType(obj, isType="transform") and cmds.listRelatives(obj, children=True):
-            cmds.rename(obj, new_name)
-        else:
-            cmds.warning(f"{obj} is not a transform or has no children.")
+        cmds.rename(obj, new_name)
 
 def update_light_intensity(*args):
     intensity_value = cmds.floatSliderGrp("intensitySlider", query=True, value=True)
@@ -86,61 +68,51 @@ def update_light_scale(*args):
 
 def save_light_preset(*args):
     preset_name = cmds.textFieldGrp("presetNameField", query=True, text=True)
-    selected_lights = cmds.ls(selection=True, dag=True, type="light")
-    preset_data = {}
-    for light in selected_lights:
-        light_attrs = cmds.listAttr(light, writable=True)
-        attr_values = {}
-        for attr in light_attrs:
-            try:
-                value = cmds.getAttr(light + "." + attr)
-                attr_values[attr] = value
-            except:
-                pass
-        preset_data[light] = attr_values
-
     file_path = cmds.fileDialog2(fileMode=0, caption="Save Light Preset")[0]
-    with open(file_path, 'w') as f:
-        json.dump(preset_data, f)
+    light_data = {}
+    selected_lights = cmds.ls(selection=True, dag=True, type="light")
+    for light in selected_lights:
+        light_data[light] = {
+            "type": cmds.objectType(light),
+            "attributes": {}
+        }
+        attributes = cmds.listAttr(light, keyable=True)
+        for attr in attributes:
+            light_data[light]["attributes"][attr] = cmds.getAttr(light + "." + attr)
+    with open(os.path.join(file_path, preset_name + ".json"), "w") as f:
+        json.dump(light_data, f)
 
 def load_light_preset(*args):
     file_path = cmds.fileDialog2(fileMode=1, caption="Load Light Preset")[0]
-    with open(file_path, 'r') as f:
-        preset_data = json.load(f)
-
-    for light, attrs in preset_data.items():
-        for attr, value in attrs.items():
-            if cmds.objExists(light + "." + attr):
+    with open(file_path, "r") as f:
+        light_data = json.load(f)
+    for light, data in light_data.items():
+        if cmds.objExists(light):
+            for attr, value in data["attributes"].items():
                 cmds.setAttr(light + "." + attr, value)
+        else:
+            new_light = cmds.shadingNode(data["type"], asLight=True)
+            for attr, value in data["attributes"].items():
+                cmds.setAttr(new_light + "." + attr, value)
+
+def render_preview(*args):
+    cmds.arnoldRenderToTexture()
 
 def highlight_lights(*args):
     selected_lights = cmds.ls(selection=True, dag=True, type="light")
     for light in selected_lights:
-        light_shape = cmds.listRelatives(light, shapes=True)
-        if light_shape:
-            cmds.setAttr(light_shape[0] + ".useColor", 2)
-            cmds.setAttr(light_shape[0] + ".lightColor", 1, 1, 0)  # Yellow color
+        cmds.setAttr(light + ".useColor", 2)
+        cmds.setAttr(light + ".lightColor", 1, 1, 0)
 
 def reset_light_colors(*args):
-    all_lights = cmds.ls(dag=True, type="light")
-    for light in all_lights:
-        light_shape = cmds.listRelatives(light, shapes=True)
-        if light_shape:
-            cmds.setAttr(light_shape[0] + ".useColor", 0)
+    selected_lights = cmds.ls(selection=True, dag=True, type="light")
+    for light in selected_lights:
+        cmds.setAttr(light + ".useColor", 0)
 
 def visualize_light_influence(*args):
     selected_lights = cmds.ls(selection=True, dag=True, type="light")
     for light in selected_lights:
-        light_shape = cmds.listRelatives(light, shapes=True)
-        if light_shape:
-            cmds.setAttr(light_shape[0] + ".displayCone", 1)
-
-def hide_light_influence(*args):
-    selected_lights = cmds.ls(selection=True, dag=True, type="light")
-    for light in selected_lights:
-        light_shape = cmds.listRelatives(light, shapes=True)
-        if light_shape:
-            cmds.setAttr(light_shape[0] + ".displayCone", 0)
+        cmds.setAttr(light + ".displayCone", True)
 
 def lighting_tool_ui():
     window_name = "lightingToolWindow"
@@ -151,37 +123,57 @@ def lighting_tool_ui():
     cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
     cmds.columnLayout(adjustableColumn=True)
     
+    # 1. Light Creation and Management
+    cmds.frameLayout(label="1. Light Creation and Management", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     light_type_menu = cmds.optionMenu(label="Light Type")
     cmds.menuItem(label="Point Light")
     cmds.menuItem(label="Directional Light")
     cmds.menuItem(label="Spot Light")
     cmds.menuItem(label="Area Light")
-    
     cmds.button(label="Create Light", command=lambda x: create_light(cmds.optionMenu(light_type_menu, query=True, value=True)))
     cmds.button(label="Delete Selected Lights", command=delete_selected_lights)
     cmds.button(label="Group Selected Lights", command=group_lights)
-    
     cmds.textFieldGrp("renameLightField", label="New Light Name", text="new_light_name")
     cmds.button(label="Rename Selected Light", command=rename_light)
+    cmds.setParent('..')
+    cmds.setParent('..')
     
-    cmds.textFieldGrp("renameGroupField", label="New Group Name", text="new_group_name")
-    cmds.button(label="Rename Selected Group", command=rename_group)
-    
+    # 2. Light Parameter Controls
+    cmds.frameLayout(label="2. Light Parameter Controls", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     cmds.floatSliderGrp("intensitySlider", label="Intensity", field=True, minValue=0, maxValue=10, fieldMinValue=0, fieldMaxValue=100, value=1, changeCommand=update_light_intensity)
     cmds.colorSliderGrp("colorPicker", label="Color", rgb=(1, 1, 1), changeCommand=update_light_color)
-    
     cmds.floatFieldGrp("positionControls", label="Position", numberOfFields=3, value1=0.0, value2=0.0, value3=0.0, changeCommand=update_light_position)
     cmds.floatFieldGrp("rotationControls", label="Rotation", numberOfFields=3, value1=0.0, value2=0.0, value3=0.0, changeCommand=update_light_rotation)
     cmds.floatFieldGrp("scaleControls", label="Scale", numberOfFields=3, value1=1.0, value2=1.0, value3=1.0, changeCommand=update_light_scale)
+    cmds.setParent('..')
+    cmds.setParent('..')
     
+    # 3. Lighting Presets and Templates
+    cmds.frameLayout(label="3. Lighting Presets and Templates", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     cmds.textFieldGrp("presetNameField", label="Preset Name", text="new_preset")
     cmds.button(label="Save Light Preset", command=save_light_preset)
     cmds.button(label="Load Light Preset", command=load_light_preset)
+    cmds.setParent('..')
+    cmds.setParent('..')
     
+    # 4. Real-Time Preview and Rendering
+    cmds.frameLayout(label="4. Real-Time Preview and Rendering", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    cmds.button(label="Render Preview", command=render_preview)
+    cmds.setParent('..')
+    cmds.setParent('..')
+    
+    # 5. Scene Interaction and Visualization
+    cmds.frameLayout(label="5. Scene Interaction and Visualization", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     cmds.button(label="Highlight Lights", command=highlight_lights)
     cmds.button(label="Reset Light Colors", command=reset_light_colors)
     cmds.button(label="Visualize Light Influence", command=visualize_light_influence)
-    cmds.button(label="Hide Light Influence", command=hide_light_influence)
+    cmds.setParent('..')
+    cmds.setParent('..')
     
     cmds.showWindow(window_name)
 

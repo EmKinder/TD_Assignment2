@@ -1,0 +1,118 @@
+import maya.cmds as cmds
+import json
+import os
+
+# 1. Light Creation and Management
+def create_light(light_type, *args):
+    # (Implementation for creating lights)
+
+def delete_selected_lights(*args):
+    # (Implementation for deleting selected lights)
+
+def group_lights(*args):
+    # (Implementation for grouping lights)
+
+def rename_light(*args):
+    # (Implementation for renaming lights)
+
+# 2. Light Parameter Controls
+def update_light_intensity(*args):
+    # (Implementation for updating light intensity)
+
+def update_light_color(*args):
+    # (Implementation for updating light color)
+
+def update_light_position(*args):
+    # (Implementation for updating light position)
+
+def update_light_rotation(*args):
+    # (Implementation for updating light rotation)
+
+def update_light_scale(*args):
+    # (Implementation for updating light scale)
+
+# 3. Lighting Presets and Templates
+def save_light_preset(*args):
+    # (Implementation for saving light presets)
+
+def load_light_preset(*args):
+    # (Implementation for loading light presets)
+
+# 4. Real-Time Preview and Rendering
+def render_preview(*args):
+    # (Implementation for rendering a preview)
+
+# 5. Scene Interaction and Visualization
+def highlight_lights(*args):
+    # (Implementation for highlighting lights)
+
+def reset_light_colors(*args):
+    # (Implementation for resetting light colors)
+
+def visualize_light_influence(*args):
+    # (Implementation for visualizing light influence)
+
+def lighting_tool_ui():
+    window_name = "lightingToolWindow"
+    
+    if cmds.window(window_name, exists=True):
+        cmds.deleteUI(window_name)
+    
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+    cmds.columnLayout(adjustableColumn=True)
+    
+    # 1. Light Creation and Management
+    cmds.frameLayout(label="1. Light Creation and Management", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    light_type_menu = cmds.optionMenu(label="Light Type")
+    cmds.menuItem(label="Point Light")
+    cmds.menuItem(label="Directional Light")
+    cmds.menuItem(label="Spot Light")
+    cmds.menuItem(label="Area Light")
+    cmds.button(label="Create Light", command=lambda x: create_light(cmds.optionMenu(light_type_menu, query=True, value=True)))
+    cmds.button(label="Delete Selected Lights", command=delete_selected_lights)
+    cmds.button(label="Group Selected Lights", command=group_lights)
+    cmds.textFieldGrp("renameLightField", label="New Light Name", text="new_light_name")
+    cmds.button(label="Rename Selected Light", command=rename_light)
+    cmds.setParent('..')
+    cmds.setParent('..')
+    
+    # 2. Light Parameter Controls
+    cmds.frameLayout(label="2. Light Parameter Controls", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    cmds.floatSliderGrp("intensitySlider", label="Intensity", field=True, minValue=0, maxValue=10, fieldMinValue=0, fieldMaxValue=100, value=1, changeCommand=update_light_intensity)
+    cmds.colorSliderGrp("colorPicker", label="Color", rgb=(1, 1, 1), changeCommand=update_light_color)
+    cmds.floatFieldGrp("positionControls", label="Position", numberOfFields=3, value1=0.0, value2=0.0, value3=0.0, changeCommand=update_light_position)
+    cmds.floatFieldGrp("rotationControls", label="Rotation", numberOfFields=3, value1=0.0, value2=0.0, value3=0.0, changeCommand=update_light_rotation)
+    cmds.floatFieldGrp("scaleControls", label="Scale", numberOfFields=3, value1=1.0, value2=1.0, value3=1.0, changeCommand=update_light_scale)
+    cmds.setParent('..')
+    cmds.setParent('..')
+    
+    # 3. Lighting Presets and Templates
+    cmds.frameLayout(label="3. Lighting Presets and Templates", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    cmds.textFieldGrp("presetNameField", label="Preset Name", text="new_preset")
+    cmds.button(label="Save Light Preset", command=save_light_preset)
+    cmds.button(label="Load Light Preset", command=load_light_preset)
+    cmds.setParent('..')
+    cmds.setParent('..')
+    
+    # 4. Real-Time Preview and Rendering
+    cmds.frameLayout(label="4. Real-Time Preview and Rendering", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    cmds.button(label="Render Preview", command=render_preview)
+    cmds.setParent('..')
+    cmds.setParent('..')
+    
+    # 5. Scene Interaction and Visualization
+    cmds.frameLayout(label="5. Scene Interaction and Visualization", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    cmds.button(label="Highlight Lights", command=highlight_lights)
+    cmds.button(label="Reset Light Colors", command=reset_light_colors)
+    cmds.button(label="Visualize Light Influence", command=visualize_light_influence)
+    cmds.setParent('..')
+    cmds.setParent('..')
+    
+    cmds.showWindow(window_name)
+
+lighting_tool_ui()

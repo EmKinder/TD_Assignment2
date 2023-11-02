@@ -84,105 +84,208 @@ def update_light_scale(*args):
     for light in selected_lights:
         cmds.setAttr(light + ".scale", scale_values[0], scale_values[1], scale_values[2])
 
+def set_shader_viewpoint(*args):
+    panel = cmds.getPanel(withFocus=True)
+    if cmds.getPanel(typeOf=panel) == "modelPanel":
+        cmds.modelEditor(panel, edit=True, displayAppearance='smoothShaded', allObjects=False)
+        cmds.modelEditor(panel, edit=True, displayLights='all')
+        cmds.modelEditor(panel, edit=True, displayTextures=True)
+
+def open_preview_window(*args):
+    # Open the render preview window
+    if cmds.window("renderPreviewWindow", exists=True):
+        cmds.deleteUI("renderPreviewWindow")
+    
+    cmds.window("renderPreviewWindow", title="Render Preview", widthHeight=(600, 400))
+    cmds.paneLayout(configuration="single")
+    cmds.modelPanel(cam="persp", label="Render Preview")
+    cmds.showWindow("renderPreviewWindow")
+
+def quick_render(*args):
+    # Set the camera for rendering (replace "persp" with your camera's name)
+    render_camera = "persp"
+    cmds.modelEditor("modelPanel4", edit=True, camera=render_camera)  # Change "modelPanel4" to your model panel
+    
+    # Set render options
+    cmds.setAttr("defaultRenderGlobals.currentRenderer", "arnold", type="string")
+    cmds.setAttr("defaultRenderGlobals.imageFormat", 8)  # 8 stands for PNG format, you can change it as needed
+    
+    # Perform the render
+    cmds.render(render_camera)  # Use the specified camera for rendering
+
 def save_light_preset(*args):
     preset_name = cmds.textFieldGrp("presetNameField", query=True, text=True)
-    selected_lights = cmds.ls(selection=True, dag=True, type="light")
-    preset_data = {}
-    for light in selected_lights:
-        light_attrs = cmds.listAttr(light, writable=True)
-        attr_values = {}
-        for attr in light_attrs:
-            try:
-                value = cmds.getAttr(light + "." + attr)
-                attr_values[attr] = value
-            except:
-                pass
-        preset_data[light] = attr_values
-
-    file_path = cmds.fileDialog2(fileMode=0, caption="Save Light Preset")[0]
-    with open(file_path, 'w') as f:
-        json.dump(preset_data, f)
+    if not preset_name:
+        cmds.warning("Please enter a valid preset name.")
+        return
+    
+    directory = cmds.fileDialog2(fileMode=3, caption="Select Directory to Save Preset")[0]
+    if not directory:
+        return
+    
+    preset_path = os.path.join(directory, preset_name + ".ma")
+    
+    lights = cmds.ls(lights=True)
+    if not lights:
+        cmds.warning("No lights found in the scene.")
+        return
+    
+    cmds.select(lights, replace=True)
+    cmds.file(preset_path, type='mayaAscii', exportSelected=True, force=True)
+    
+    cmds.confirmDialog(title="Preset Saved", message="Lighting preset saved successfully!", button=["OK"])
+    cmds.select(clear=True)
 
 def load_light_preset(*args):
-    file_path = cmds.fileDialog2(fileMode=1, caption="Load Light Preset")[0]
-    with open(file_path, 'r') as f:
-        preset_data = json.load(f)
+    preset_path = cmds.fileDialog2(fileMode=1, caption="Select Lighting Preset", fileFilter="Maya ASCII (*.ma)")[0]
+    if not preset_path:
+        return
+    
+    cmds.file(preset_path, i=True, type='mayaAscii', mergeNamespacesOnClash=False, options="v=0;", loadReferenceDepth="all")
 
-    for light, attrs in preset_data.items():
-        for attr, value in attrs.items():
-            if cmds.objExists(light + "." + attr):
-                cmds.setAttr(light + "." + attr, value)
+def set_render_quality(*args):
+    quality = cmds.optionMenu("qualityMenu", query=True, value=True)
+
+    # Check if Arnold renderer is active
+    current_renderer = cmds.getAttr("defaultRenderGlobals.currentRenderer")
+    if current_renderer != "arnold":
+        cmds.warning("Arnold renderer is not active. Please switch to Arnold for rendering.")
+        return
+
+    # Check if Arnold render options node exists and create if necessary
+    arnold_options = "defaultArnoldRenderOptions"
+    if not cmds.objExists(arnold_options):
+        try:
+            arnold_options = cmds.createNode("aiOptions", name=arnold_options)
+        except:
+            cmds.warning("Failed to create Arnold render options. Make sure the Arnold renderer is loaded.")
+            return
+
+    # Set render quality based on the selected option
+    try:
+        if quality == "Low":
+            cmds.setAttr(arnold_options + ".AASamples", 2)
+            cmds.setAttr(arnold_options + ".GI_diffuse_samples", 2)
+            cmds.setAttr(arnold_options + ".GI_glossy_samples", 2)
+            cmds.setAttr(arnold_options + ".GI_refraction_samples", 2)
+        elif quality == "Medium":
+            cmds.setAttr(arnold_options + ".AASamples", 4)
+            cmds.setAttr(arnold_options + ".GI_diffuse_samples", 4)
+            cmds.setAttr(arnold_options + ".GI_glossy_samples", 4)
+            cmds.setAttr(arnold_options + ".GI_refraction_samples", 4)
+        elif quality == "High":
+            cmds.setAttr(arnold_options + ".AASamples", 8)
+            cmds.setAttr(arnold_options + ".GI_diffuse_samples", 8)
+            cmds.setAttr(arnold_options + ".GI_glossy_samples", 8)
+            cmds.setAttr(arnold_options + ".GI_refraction_samples", 8)
+        else:
+            cmds.warning("Unknown quality setting: {}".format(quality))
+    except Exception as e:
+        cmds.warning("Error setting render quality: {}".format(str(e)))
+
+def render_preview(*args):
+    open_preview_window()
 
 def highlight_lights(*args):
     selected_lights = cmds.ls(selection=True, dag=True, type="light")
     for light in selected_lights:
         light_shape = cmds.listRelatives(light, shapes=True)
         if light_shape:
-            cmds.setAttr(light_shape[0] + ".useColor", 2)
-            cmds.setAttr(light_shape[0] + ".lightColor", 1, 1, 0)  # Yellow color
+            cmds.setAttr(light_shape[0] + ".useColorTemperature", 0)  # Disable color temperature
+            cmds.setAttr(light_shape[0] + ".color", 1, 1, 0, type="double3")  # Set color to yellow
 
 def reset_light_colors(*args):
     all_lights = cmds.ls(dag=True, type="light")
     for light in all_lights:
         light_shape = cmds.listRelatives(light, shapes=True)
         if light_shape:
-            cmds.setAttr(light_shape[0] + ".useColor", 0)
+            cmds.setAttr(light_shape[0] + ".color", 0, 0, 0, type="double3")  # Set color to black
 
-def visualize_light_influence(*args):
+def isolate_lights(*args):
+    all_lights = cmds.ls(dag=True, type="light")
     selected_lights = cmds.ls(selection=True, dag=True, type="light")
+
+    # Hide all lights
+    for light in all_lights:
+        light_shape = cmds.listRelatives(light, shapes=True)
+        if light_shape:
+            cmds.setAttr(light_shape[0] + ".visibility", 0)
+
+    # Show selected lights
     for light in selected_lights:
         light_shape = cmds.listRelatives(light, shapes=True)
         if light_shape:
-            cmds.setAttr(light_shape[0] + ".displayCone", 1)
-
-def hide_light_influence(*args):
-    selected_lights = cmds.ls(selection=True, dag=True, type="light")
-    for light in selected_lights:
-        light_shape = cmds.listRelatives(light, shapes=True)
-        if light_shape:
-            cmds.setAttr(light_shape[0] + ".displayCone", 0)
+            cmds.setAttr(light_shape[0] + ".visibility", 1)
 
 def lighting_tool_ui():
     window_name = "lightingToolWindow"
-    
+
     if cmds.window(window_name, exists=True):
         cmds.deleteUI(window_name)
-    
-    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 800))
+
+    cmds.window(window_name, title="Lighting Tool", widthHeight=(300, 850))
     cmds.columnLayout(adjustableColumn=True)
-    
+
+    # 1. Light Creation and Management
+    cmds.frameLayout(label="1. Light Creation and Management", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     light_type_menu = cmds.optionMenu(label="Light Type")
     cmds.menuItem(label="Point Light")
     cmds.menuItem(label="Directional Light")
     cmds.menuItem(label="Spot Light")
     cmds.menuItem(label="Area Light")
-    
     cmds.button(label="Create Light", command=lambda x: create_light(cmds.optionMenu(light_type_menu, query=True, value=True)))
     cmds.button(label="Delete Selected Lights", command=delete_selected_lights)
     cmds.button(label="Group Selected Lights", command=group_lights)
-    
     cmds.textFieldGrp("renameLightField", label="New Light Name", text="new_light_name")
     cmds.button(label="Rename Selected Light", command=rename_light)
-    
     cmds.textFieldGrp("renameGroupField", label="New Group Name", text="new_group_name")
     cmds.button(label="Rename Selected Group", command=rename_group)
-    
+    cmds.setParent('..')
+    cmds.setParent('..')
+
+    # 2. Light Parameter Controls
+    cmds.frameLayout(label="2. Light Parameter Controls", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     cmds.floatSliderGrp("intensitySlider", label="Intensity", field=True, minValue=0, maxValue=10, fieldMinValue=0, fieldMaxValue=100, value=1, changeCommand=update_light_intensity)
     cmds.colorSliderGrp("colorPicker", label="Color", rgb=(1, 1, 1), changeCommand=update_light_color)
-    
     cmds.floatFieldGrp("positionControls", label="Position", numberOfFields=3, value1=0.0, value2=0.0, value3=0.0, changeCommand=update_light_position)
     cmds.floatFieldGrp("rotationControls", label="Rotation", numberOfFields=3, value1=0.0, value2=0.0, value3=0.0, changeCommand=update_light_rotation)
     cmds.floatFieldGrp("scaleControls", label="Scale", numberOfFields=3, value1=1.0, value2=1.0, value3=1.0, changeCommand=update_light_scale)
-    
+    cmds.setParent('..')
+    cmds.setParent('..')
+
+    # 3. Lighting Presets and Templates
+    cmds.frameLayout(label="3. Lighting Presets and Templates", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     cmds.textFieldGrp("presetNameField", label="Preset Name", text="new_preset")
     cmds.button(label="Save Light Preset", command=save_light_preset)
     cmds.button(label="Load Light Preset", command=load_light_preset)
-    
+    cmds.setParent('..')
+    cmds.setParent('..')
+
+    # 4. Real-Time Preview and Rendering
+    cmds.frameLayout(label="4. Real-Time Preview and Rendering", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
+    cmds.button(label="Open Preview Window", command=open_preview_window)
+    cmds.button(label="Quick Render", command=quick_render)
+    cmds.optionMenu("qualityMenu", label="Render Quality")
+    cmds.menuItem(label="Low")
+    cmds.menuItem(label="Medium")
+    cmds.menuItem(label="High")
+    cmds.button(label="Set Quality", command=set_render_quality)
+    cmds.setParent('..')
+    cmds.setParent('..')
+
+    # 5. Scene Interaction and Visualization
+    cmds.frameLayout(label="5. Scene Interaction and Visualization", collapsable=True, width=300)
+    cmds.columnLayout(adjustableColumn=True)
     cmds.button(label="Highlight Lights", command=highlight_lights)
     cmds.button(label="Reset Light Colors", command=reset_light_colors)
-    cmds.button(label="Visualize Light Influence", command=visualize_light_influence)
-    cmds.button(label="Hide Light Influence", command=hide_light_influence)
-    
+    cmds.button(label="Isolate Lights", command=isolate_lights)
+    cmds.setParent('..')
+    cmds.setParent('..')
+
     cmds.showWindow(window_name)
 
 lighting_tool_ui()

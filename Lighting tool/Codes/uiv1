@@ -1,0 +1,42 @@
+import maya.cmds as cmds
+import json
+import os
+
+def create_light(light_type, *args):
+    # ... (Same as before)
+
+def delete_selected_lights(*args):
+    # ... (Same as before)
+
+def group_lights(*args):
+    # ... (Same as before)
+
+def rename_light(*args):
+    # ... (Same as before)
+
+def rename_group(*args):
+    # ... (Same as before)
+
+def update_light_intensity(*args):
+    # ... (Same as before)
+
+def update_light_color(*args):
+    # ... (Same as before)
+
+def update_light_position(*args):
+    # ... (Same as before)
+
+def update_light_rotation(*args):
+    # ... (Same as before)
+
+def update_light_scale(*args):
+    # ... (Same as before)
+
+def save_light_preset(*args):
+    # ... (Same as before)
+
+def load_light_preset(*args):
+    # ... (Same as before)
+
+def highlight_lights(*args):
+    #
