@@ -136,7 +136,7 @@ def publishExport(*args):
                 os.makedirs(layout_source_path)
                 
             cmds.file(latest_published_version, open=True, force=True)
-            default_cameras = ["frontShape", "perspShape", "sideShape", "topShape"]
+            default_cameras = ["frontShape", "perspShape", "sideShape", "topShape", "|persp", "|front", "|side", "|top", "persp", "front", "side", "top"]
             all_cameras = cmds.ls(type='camera')
             cameras = [cam for cam in all_cameras if cam not in default_cameras]
             for camera_name in cameras:
@@ -154,43 +154,54 @@ def publishExport(*args):
                     cmds.file(source_exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
                     cmds.AbcExport(j="-frameRange 1 120 -root " + camera_name + " -file " + cache_exported_file)
             print("Exporting Cameras Done")
-            deault_sets = ["defaultLastHiddenSet", "defaultHideFaceDataSet", "defaultCreaseDataSet", "defaultObjectSet", "defaultLightSet", "internal_standInSE", "internal_soloSE", "initialParticleSE", "initialShadingGroup"]     
-            all_sets = cmds.listSets(allSets=True)
-            set_list = [set for set in all_sets if set not in deault_sets]
-            for set_name in set_list:
-                print(set_name)
-                if not set_name:
-                    print("no set selected")
-                else:
-                    cmds.select(set_name, replace=True)
-                    exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(set_no) + ".mb"
+            all_set_list = cmds.ls(dag=True, type='transform')
+            set_list = [set for set in all_set_list if set not in default_cameras]
+            set_name = set_list[0]
+            print(set_name)
+            if not set_name:
+                print("no set selected")
+            
+            else:
+                cmds.select(set_name, replace=True)
+                exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(set_no) + ".mb"
+                while os.path.isfile(exported_file):
+                    set_no += 1
+                    exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(set_no) + ".mb"                    
+                cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
+                objects_in_set = cmds.listRelatives(set_name, children=True, type='transform', fullPath=True)
+                print("Exporting Sets Done")
+                for object_name in objects_in_set:
+                    sanitized_name = object_name.replace(set_name, "")
+                    sanitized_name = sanitized_name.replace("mRef", "")
+                    sanitized_name = sanitized_name.replace("_", "")
+                    sanitized_name = sanitized_name.replace(":", "")
+                    sanitized_name = sanitized_name.replace("|", "")
+
+
+                    set_export_path = setPiece_path + "/" + sanitized_name
+                    exported_file = set_export_path + "/" + sanitized_name + "_" + "{:03d}".format(setpiece_no) + ".mb"
                     while os.path.isfile(exported_file):
-                        set_no += 1
-                        exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(set_no) + ".mb"                    
+                        setpiece_no += 1
+                        exported_file = set_export_path + "/" + sanitized_name + "_" + "{:03d}".format(setpiece_no) + ".mb"
+                    cmds.select(object_name, replace=True)
                     cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
-                    objects_in_set = cmds.listConnections(set_name, type='transform', shapes=True)
-                    print("Exporting Sets Done")
-                    for object_name in objects_in_set:
-                        cmds.select(object_name, replace=True)
-                        set_export_path = setPiece_path + "/" + object_name
-                        exported_file = set_export_path + "/" + object_name + "_" + "{:03d}".format(setpiece_no) + ".mb"
-                        while os.path.isfile(exported_file):
-                            setpiece_no += 1
-                            exported_file = set_export_path + "/" + object_name + "_" + "{:03d}".format(setpiece_no) + ".mb"
-                        cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
-                        keyframes = cmds.keyframe(object_name, query=True, timeChange=True)
-                        if keyframes:
-                            FBX_file_path = animation_path +"/" + object_name +"/fbx"
-                            ABC_file_path = os.path.join(animation_path, object_name, "alembic")
-                            if not os.path.exists(FBX_file_path):
-                                os.makedirs(FBX_file_path)
-                            if not os.path.exists(ABC_file_path):
-                                os.makedirs(ABC_file_path)
-                            alembic_file = os.path.join(ABC_file_path, object_name + "_" + "{:03d}".format(setpiece_no) + ".abc")
-                            fbx_export_path = FBX_file_path + "/" + object_name + "_" + "{:03d}".format(setpiece_no)
-                            print(fbx_export_path)
-                            cmds.file(fbx_export_path, force=True, type="FBX export", pr=True, es=True )
-                            cmds.AbcExport(j="-frameRange 1 120 -root " + object_name + " -file " + alembic_file)
+                   # time_range = (cmds.playbackOptions(query=True, minTime=True), cmds.playbackOptions(query=True, maxTime=True))
+                   # keyframes = cmds.keyframe(object_name, query=True, time=time_range)
+                   # print(f"Object: {object_name}, Keyframes: {keyframes}")
+                   # print(keyframes)
+                   # if keyframes:
+                    FBX_file_path = animation_path +"/" + sanitized_name +"/fbx"
+                    ABC_file_path = os.path.join(animation_path, sanitized_name, "alembic")
+                    if not os.path.exists(FBX_file_path):
+                        os.makedirs(FBX_file_path)
+                    if not os.path.exists(ABC_file_path):
+                        os.makedirs(ABC_file_path)
+                    alembic_file = os.path.join(ABC_file_path, sanitized_name + "_" + "{:03d}".format(setpiece_no) + ".abc")
+                    fbx_export_path = FBX_file_path + "/" + sanitized_name + "_" + "{:03d}".format(setpiece_no)
+                    print(fbx_export_path)
+                    cmds.file(fbx_export_path, force=True, type="FBX export", pr=True, es=True )
+                    cmds.AbcExport(j="-frameRange 1 120 -root " + object_name + " -file " + alembic_file)
+                        
         else:
             print("Directory not set or not valid.")
             customPopup("Directory not set or not valid.")
@@ -202,6 +213,9 @@ def menu_item_selected(selection):
     global department_name
     department_name = selection
     print("Department Changed To: " + department_name)
+    
+def sanitize_name(name):
+    return name.replace(':', '_').replace('|', '_')
                 
 def assetPublishing():
     global directoryField 
