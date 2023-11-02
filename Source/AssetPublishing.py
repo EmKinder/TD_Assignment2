@@ -22,7 +22,7 @@ def setDirectory(*args):
     selected_directory = cmds.fileDialog2(dialogStyle=2, fileMode=3)
     if selected_directory:
         directory = selected_directory[0]
-        if not os.path.exists(directory + "/WIP") or os.path.exists(directory + "/Published"):
+        if not os.path.exists(directory + "/WIP"):
             customPopup("Directory not valid (missing either WIP or Published folder")
             cmds.textField(directoryField, edit=True, text="")
             valid_directory_path = False
