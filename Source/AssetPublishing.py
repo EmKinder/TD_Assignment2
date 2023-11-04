@@ -70,7 +70,7 @@ def WIPExport(*args):
         if valid_directory_path:
             while os.path.isfile(full_file_path):
                 version_no += 1
-                file_path = name + "_" + "{:03d}".format(version_no) + ".mb"
+                file_path = name + "_" + "{:03d}".format(version_no - 1) + ".mb"
                 if department_name == "Modelling":
                     full_file_path = os.path.join(assets_directory, file_path)
                 else:
@@ -97,10 +97,6 @@ def publishExport(*args):
     global publish_path
     global directory_name
     version_no = 1
-    dir_no = 1
-    cam_no = 1
-    set_no = 1
-    setpiece_no = 1
     if not name == "":
         if department_name == "Modelling":
             this_directory_name = WIP_path + "/" + name + "/Assets"
@@ -145,12 +141,8 @@ def publishExport(*args):
                     print("no camera selected")
                 else:
                     cmds.select(camera_name, replace=True)
-                    source_exported_file = layout_source_path + "/" + camera_name + "_" + "{:03d}".format(cam_no) + ".mb"
-                    cache_exported_file = layout_cache_path + "/" + camera_name + "_" + "{:03d}".format(cam_no) + ".abc"
-                    while os.path.isfile(source_exported_file):
-                        cam_no += 1
-                        source_exported_file = layout_source_path + "/" + camera_name + "_" + "{:03d}".format(cam_no) + ".mb"
-                        cache_exported_file = layout_cache_path + "/" + camera_name + "_" + "{:03d}".format(cam_no) + ".abc"
+                    source_exported_file = layout_source_path + "/" + camera_name + "_" + "{:03d}".format(version_no - 1) + ".mb"
+                    cache_exported_file = layout_cache_path + "/" + camera_name + "_" + "{:03d}".format(version_no - 1) + ".abc"
                     cmds.file(source_exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
                     cmds.AbcExport(j="-frameRange 1 120 -root " + camera_name + " -file " + cache_exported_file)
             print("Exporting Cameras Done")
@@ -163,10 +155,7 @@ def publishExport(*args):
             
             else:
                 cmds.select(set_name, replace=True)
-                exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(set_no) + ".mb"
-                while os.path.isfile(exported_file):
-                    set_no += 1
-                    exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(set_no) + ".mb"                    
+                exported_file = set_path + "/" + set_name + "_" + "{:03d}".format(version_no - 1) + ".mb"             
                 cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
                 objects_in_set = cmds.listRelatives(set_name, children=True, type='transform', fullPath=True)
                 print("Exporting Sets Done")
@@ -179,25 +168,17 @@ def publishExport(*args):
 
 
                     set_export_path = setPiece_path + "/" + sanitized_name
-                    exported_file = set_export_path + "/" + sanitized_name + "_" + "{:03d}".format(setpiece_no) + ".mb"
-                    while os.path.isfile(exported_file):
-                        setpiece_no += 1
-                        exported_file = set_export_path + "/" + sanitized_name + "_" + "{:03d}".format(setpiece_no) + ".mb"
+                    exported_file = set_export_path + "/" + sanitized_name + "_" + "{:03d}".format(version_no - 1) + ".mb"
                     cmds.select(object_name, replace=True)
                     cmds.file(exported_file, exportSelected=True, type='mayaBinary', preserveReferences=False)
-                   # time_range = (cmds.playbackOptions(query=True, minTime=True), cmds.playbackOptions(query=True, maxTime=True))
-                   # keyframes = cmds.keyframe(object_name, query=True, time=time_range)
-                   # print(f"Object: {object_name}, Keyframes: {keyframes}")
-                   # print(keyframes)
-                   # if keyframes:
                     FBX_file_path = animation_path +"/" + sanitized_name +"/fbx"
                     ABC_file_path = os.path.join(animation_path, sanitized_name, "alembic")
                     if not os.path.exists(FBX_file_path):
                         os.makedirs(FBX_file_path)
                     if not os.path.exists(ABC_file_path):
                         os.makedirs(ABC_file_path)
-                    alembic_file = os.path.join(ABC_file_path, sanitized_name + "_" + "{:03d}".format(setpiece_no) + ".abc")
-                    fbx_export_path = FBX_file_path + "/" + sanitized_name + "_" + "{:03d}".format(setpiece_no)
+                    alembic_file = os.path.join(ABC_file_path, sanitized_name + "_" + "{:03d}".format(version_no - 1) + ".abc")
+                    fbx_export_path = FBX_file_path + "/" + sanitized_name + "_" + "{:03d}".format(version_no - 1)
                     print(fbx_export_path)
                     cmds.file(fbx_export_path, force=True, type="FBX export", pr=True, es=True )
                     cmds.AbcExport(j="-frameRange 1 120 -root " + object_name + " -file " + alembic_file)
